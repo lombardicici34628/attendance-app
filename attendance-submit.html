@@ -58,7 +58,7 @@
     }
     textarea {
       width: 100%;
-      min-height: 80px;
+      min-height: 120px;
       padding: 12px;
       font-family: 'Inter', sans-serif;
       font-size: 1rem;
@@ -71,35 +71,6 @@
       outline: none;
       border-color: #3b82f6;
       box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
-    }
-    .video-container {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 8px;
-      overflow: hidden;
-      border-radius: 16px;
-      border: 3px solid #3b82f6;
-      max-width: 100%;
-      position: relative;
-      background: black;
-    }
-    video {
-      width: 100%;
-      height: auto;
-      border-radius: 16px;
-      object-fit: cover;
-      aspect-ratio: 4 / 5;
-      max-height: 400px;
-      background: #000;
-    }
-    img#selfie-preview {
-      width: 100%;
-      height: auto;
-      aspect-ratio: 4 / 5;
-      border-radius: 16px;
-      object-fit: cover;
-      display: none;
-      user-select: none;
     }
     .btn {
       background-color: #3b82f6;
@@ -124,25 +95,6 @@
     .btn:disabled {
       cursor: not-allowed;
       background-color: #93c5fd;
-    }
-    .capture-btn {
-      background-color: #2563eb;
-      padding: 10px 20px;
-      font-size: 1rem;
-      border-radius: 12px;
-      margin-top: -12px;
-      margin-bottom: 16px;
-      transition: background-color 0.3s ease;
-      user-select: none;
-      width: fit-content;
-      align-self: center;
-    }
-    .capture-btn:hover:not(:disabled) {
-      background-color: #1e40af;
-    }
-    .capture-btn:disabled {
-      background-color: #bfdbfe;
-      cursor: not-allowed;
     }
     .material-icons.md-24 {
       font-size: 24px;
@@ -176,16 +128,11 @@
   <h1>Attendance Submission</h1>
   <h2 id="empName" aria-live="polite"></h2>
   <main role="main" aria-label="Attendance submission form">
-    <div class="video-container" aria-live="polite" aria-label="Camera preview for selfie capture">
-      <video id="video" autoplay playsinline></video>
-      <img id="selfie-preview" alt="Captured selfie preview" />
-    </div>
-    <button id="captureBtn" class="capture-btn" aria-label="Capture selfie">
-      <span class="material-icons md-24" aria-hidden="true">camera_alt</span> Capture Selfie
-    </button>
     <label for="description">Description</label>
-    <textarea id="description" name="description" placeholder="Enter your attendance description..." rows="3" aria-required="true"></textarea>
-    <button id="submitBtn" class="btn" disabled aria-disabled="true" aria-label="Submit attendance">Submit Attendance</button>
+    <textarea id="description" name="description" placeholder="Enter your attendance description..." rows="5" aria-required="true"></textarea>
+    <button id="submitBtn" class="btn" disabled aria-disabled="true" aria-label="Submit attendance">
+      <span class="material-icons md-24" aria-hidden="true">send</span> Submit Attendance
+    </button>
     <p id="errorMsg" class="error-msg" role="alert" aria-live="assertive" style="display:none;"></p>
     <p id="successMsg" class="success-msg" role="alert" aria-live="polite" style="display:none;"></p>
   </main>
@@ -217,27 +164,19 @@
     ];
 
     const empNameElem = document.getElementById('empName');
-    const videoElem = document.getElementById('video');
-    const captureBtn = document.getElementById('captureBtn');
-    const selfiePreview = document.getElementById('selfie-preview');
     const descriptionElem = document.getElementById('description');
     const submitBtn = document.getElementById('submitBtn');
     const errorMsg = document.getElementById('errorMsg');
     const successMsg = document.getElementById('successMsg');
-
-    let stream = null;
-    let selfieCapturedDataUrl = null;
 
     // Show employee name or error if invalid employee
     function displayEmployeeInfo() {
       const emp = employees.find(e => e.id === employeeId);
       if (!emp) {
         empNameElem.textContent = 'Invalid or missing employee ID.';
-        captureBtn.disabled = true;
         submitBtn.disabled = true;
         submitBtn.setAttribute('aria-disabled', 'true');
         showError('The scanned QR code has an invalid employee ID. Please contact admin.');
-        stopCameraStream();
         return false;
       }
       empNameElem.textContent = `Employee: ${emp.name}`;
@@ -264,79 +203,9 @@
       successMsg.style.display = 'none';
     }
 
-    // Start camera stream with front camera
-    async function startCamera() {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user', width: {ideal: 720}, height: {ideal: 960} },
-          audio: false,
-        });
-        videoElem.srcObject = stream;
-        clearMessages();
-      } catch (err) {
-        showError('Camera access denied or unavailable. Please enable camera permissions and reload.');
-        captureBtn.disabled = true;
-        submitBtn.disabled = true;
-        submitBtn.setAttribute('aria-disabled', 'true');
-      }
-    }
-
-    // Stop camera stream
-    function stopCameraStream() {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-      }
-    }
-
-    // Capture selfie from video and show preview
-    function captureSelfie() {
-      if (!stream) {
-        showError('Camera not started.');
-        return;
-      }
-      const videoWidth = videoElem.videoWidth;
-      const videoHeight = videoElem.videoHeight;
-
-      // Create canvas to capture frame
-      const canvas = document.createElement('canvas');
-      // Use 4:5 ratio, crop centered square vertically or horizontally if needed
-      const aspectRatio = 4/5;
-      let cw, ch, cx = 0, cy = 0;
-
-      if (videoWidth / videoHeight > aspectRatio) {
-        ch = videoHeight;
-        cw = videoHeight * aspectRatio;
-        cx = (videoWidth - cw) / 2;
-        cy = 0;
-      } else {
-        cw = videoWidth;
-        ch = videoWidth / aspectRatio;
-        cy = (videoHeight - ch) /2;
-        cx = 0;
-      }
-
-      canvas.width = cw;
-      canvas.height = ch;
-
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(videoElem, cx, cy, cw, ch, 0, 0, cw, ch);
-
-      selfieCapturedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-
-      // Show selfie preview
-      selfiePreview.src = selfieCapturedDataUrl;
-      selfiePreview.style.display = 'block';
-      videoElem.style.display = 'none';
-      captureBtn.disabled = true;
-
-      enableSubmitIfReady();
-      clearMessages();
-    }
-
-    // Enable submit button if description and selfie captured
+    // Enable submit button if description is entered
     function enableSubmitIfReady() {
-      if (selfieCapturedDataUrl && descriptionElem.value.trim() !== '') {
+      if (descriptionElem.value.trim() !== '') {
         submitBtn.disabled = false;
         submitBtn.setAttribute('aria-disabled', 'false');
       } else {
@@ -360,7 +229,7 @@
       });
     }
 
-    // Save attendance record (appends to localStorage array)
+    // Save attendance record (append to localStorage array)
     async function saveAttendanceRecord() {
       const emp = employees.find(e => e.id === employeeId);
       if (!emp) {
@@ -382,12 +251,6 @@
         submitBtn.textContent = 'Submit Attendance';
         return false;
       }
-      if (!selfieCapturedDataUrl) {
-        showError('Please capture your selfie.');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit Attendance';
-        return false;
-      }
       try {
         let records = [];
         const stored = localStorage.getItem('attendanceRecords');
@@ -400,13 +263,12 @@
           employeeId: employeeId,
           timestamp: timestamp,
           description: description,
-          location: location,
-          selfieDataUrl: selfieCapturedDataUrl
+          location: location
         });
 
         localStorage.setItem('attendanceRecords', JSON.stringify(records));
         showSuccess('Attendance submitted successfully. Thank you!');
-        // Reset form inputs and video preview for potential resubmission
+        // Reset textarea for another submission if desired
         resetForm();
         return true;
       } catch (err) {
@@ -421,10 +283,6 @@
     // Reset form for another submission (optional)
     function resetForm() {
       descriptionElem.value = '';
-      selfieCapturedDataUrl = null;
-      selfiePreview.style.display = 'none';
-      videoElem.style.display = 'block';
-      captureBtn.disabled = false;
       submitBtn.disabled = true;
       submitBtn.textContent = 'Submit Attendance';
       submitBtn.setAttribute('aria-disabled', 'true');
@@ -432,10 +290,6 @@
     }
 
     // Event listeners
-    captureBtn.addEventListener('click', () => {
-      captureSelfie();
-    });
-
     descriptionElem.addEventListener('input', () => {
       enableSubmitIfReady();
       clearMessages();
@@ -445,52 +299,15 @@
       await saveAttendanceRecord();
     });
 
-    // Keyboard accessibility for capture button
-    captureBtn.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        captureSelfie();
-      }
-    });
-
     // Initialize
-    async function init() {
+    function init() {
       if (!displayEmployeeInfo()) {
         return;
       }
-      await startCamera();
       enableSubmitIfReady();
     }
 
     window.addEventListener('DOMContentLoaded', init);
-    window.addEventListener('beforeunload', () => {
-      stopCameraStream();
-    });
-
-    // Stop camera stream
-    function stopCameraStream() {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-      }
-    }
-
-    let stream = null;
-    async function startCamera() {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user', width: {ideal: 720}, height: {ideal: 960} }, // front camera ideal resolution
-          audio: false
-        });
-        videoElem.srcObject = stream;
-        clearMessages();
-      } catch (err) {
-        showError('Unable to access camera. Please allow camera permissions and reload the page.');
-        captureBtn.disabled = true;
-        submitBtn.disabled = true;
-        submitBtn.setAttribute('aria-disabled', 'true');
-      }
-    }
   </script>
 </body>
 </html>
