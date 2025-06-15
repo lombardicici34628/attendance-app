@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&amp;display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
   <style>
-    /* Base and reset */
+    /* styles same as before (omitted here for brevity, use previous CSS for attendance-submit.html) */
     *, *::before, *::after {
       box-sizing: border-box;
     }
@@ -115,7 +115,6 @@
       border-radius: 12px;
       margin-top: 8px;
     }
-    /* Responsive */
     @media (max-width: 480px) {
       main {
         max-width: 100%;
@@ -123,6 +122,10 @@
       }
     }
   </style>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <h1>Attendance Submission</h1>
@@ -138,6 +141,23 @@
   </main>
 
   <script>
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAZGnFjLogK2pRt5JjEUZCLSmmRaWRq2pw",
+      authDomain: "attendance-app-44236.firebaseapp.com",
+      databaseURL: "https://attendance-app-44236-default-rtdb.firebaseio.com",
+      projectId: "attendance-app-44236",
+      storageBucket: "attendance-app-44236.firebasestorage.app",
+      messagingSenderId: "505990578469",
+      appId: "1:505990578469:web:c76ea46128afe210ad1acc",
+      measurementId: "G-5SPT0XT58G"
+    };
+
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
     const urlParams = new URLSearchParams(window.location.search);
     const employeeId = parseInt(urlParams.get('employee'), 10);
     const employees = [
@@ -229,7 +249,7 @@
       });
     }
 
-    // Save attendance record (append to localStorage array)
+    // Save attendance record to Firestore
     async function saveAttendanceRecord() {
       const emp = employees.find(e => e.id === employeeId);
       if (!emp) {
@@ -252,23 +272,15 @@
         return false;
       }
       try {
-        let records = [];
-        const stored = localStorage.getItem('attendanceRecords');
-        if (stored) {
-          records = JSON.parse(stored);
-          if (!Array.isArray(records)) records = [];
-        }
-        // Add record
-        records.push({
+        await db.collection('attendanceRecords').add({
           employeeId: employeeId,
+          employeeName: emp.name,
           timestamp: timestamp,
           description: description,
           location: location
         });
 
-        localStorage.setItem('attendanceRecords', JSON.stringify(records));
         showSuccess('Attendance submitted successfully. Thank you!');
-        // Reset textarea for another submission if desired
         resetForm();
         return true;
       } catch (err) {
@@ -300,9 +312,17 @@
     });
 
     // Initialize
-    function init() {
+    async function init() {
       if (!displayEmployeeInfo()) {
         return;
+      }
+      // Firebase anonymous auth to allow Firestore access
+      try {
+        await auth.signInAnonymously();
+      } catch (err) {
+        showError('Failed to authenticate with server. Try again later.');
+        console.error(err);
+        submitBtn.disabled = true;
       }
       enableSubmitIfReady();
     }
@@ -311,4 +331,3 @@
   </script>
 </body>
 </html>
-

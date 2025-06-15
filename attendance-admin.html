@@ -7,8 +7,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&amp;display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <style>
-    /* Reset and base */
+    /* Same styles as previously provided (copy your previous styles) */
     *, *::before, *::after {
       box-sizing: border-box;
     }
@@ -18,9 +22,6 @@
       background: #fefefe;
       color: #1f2937;
       line-height: 1.5;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      min-height: 100vh;
       padding: 32px 24px;
       display: flex;
       flex-direction: column;
@@ -43,12 +44,10 @@
       width: 100%;
       max-width: 1200px;
     }
-    /* Container */
     .container {
       max-width: 1200px;
       width: 100%;
     }
-    /* Employee QR grid */
     .employee-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -88,8 +87,6 @@
       border-radius: 12px;
       box-shadow: 0 0 8px rgb(0 0 0 / 0.1);
     }
-
-    /* Attendance logs */
     .attendance-log {
       margin-top: 16px;
       overflow-x: auto;
@@ -136,23 +133,6 @@
       white-space: pre-wrap;
       color: #4b5563;
     }
-    /* Scrollbar styling */
-    .employee-grid::-webkit-scrollbar,
-    .attendance-log::-webkit-scrollbar {
-      width: 10px;
-      height: 10px;
-    }
-    .employee-grid::-webkit-scrollbar-thumb,
-    .attendance-log::-webkit-scrollbar-thumb {
-      background-color: rgba(59, 130, 246, 0.4);
-      border-radius: 4px;
-    }
-    .employee-grid::-webkit-scrollbar-track,
-    .attendance-log::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    /* Responsive */
     @media (max-width: 720px) {
       .employee-grid {
         grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
@@ -173,7 +153,6 @@
   <div class="container">
     <h2>Employee QR Codes</h2>
     <div class="employee-grid" id="employeeGrid" aria-label="Employee QR codes for scanning"></div>
-
     <h2>Attendance Logs</h2>
     <div class="attendance-log" aria-live="polite" aria-relevant="additions" aria-label="Attendance log of submissions">
       <table role="table" aria-describedby="logDesc">
@@ -185,163 +164,6 @@
             <th scope="col">Description</th>
           </tr>
         </thead>
-        <tbody id="attendanceLogBody">
-          <!-- Attendance entries go here -->
-        </tbody>
+        <tbody id="attendanceLogBody"></tbody>
       </table>
-      <div id="logDesc" class="sr-only">Attendance log table showing employee name, time in IST, location, and description</div>
-    </div>
-  </div>
-
-  <script>
-    // 20 employees with names
-    const employees = [
-      {id: 1, name: "Aarav Sharma"},
-      {id: 2, name: "Sneha Patel"},
-      {id: 3, name: "Rohan Gupta"},
-      {id: 4, name: "Anita Deshmukh"},
-      {id: 5, name: "Vikram Singh"},
-      {id: 6, name: "Pooja Mehta"},
-      {id: 7, name: "Sanjay Rao"},
-      {id: 8, name: "Neha Kapoor"},
-      {id: 9, name: "Aditya Khanna"},
-      {id: 10, name: "Divya Iyer"},
-      {id: 11, name: "Karan Malhotra"},
-      {id: 12, name: "Maya Nair"},
-      {id: 13, name: "Raghav Joshi"},
-      {id: 14, name: "Sunita Verma"},
-      {id: 15, name: "Tarun Bhatia"},
-      {id: 16, name: "Priya Chawla"},
-      {id: 17, name: "Anil Kumar"},
-      {id: 18, name: "Neelam Joshi"},
-      {id: 19, name: "Rajesh Kumar"},
-      {id: 20, name: "Sonal Gupta"},
-    ];
-
-    const employeeGrid = document.getElementById('employeeGrid');
-    const attendanceLogBody = document.getElementById('attendanceLogBody');
-
-    // Format date/time IST for display
-    function formatISTDateTime(date) {
-      if (!(date instanceof Date)) date = new Date(date);
-      try {
-        return new Intl.DateTimeFormat('en-IN', {
-          year: 'numeric', month: 'short', day: 'numeric',
-          hour: '2-digit', minute: '2-digit', second: '2-digit',
-          hour12: false, timeZone: 'Asia/Kolkata'
-        }).format(date);
-      } catch {
-        return date.toLocaleString();
-      }
-    }
-
-    // Generate QR codes for each employee
-    function generateQRCodes() {
-      employees.forEach(emp => {
-        const card = document.createElement('div');
-        card.className = 'employee-card';
-        const qrCodeDiv = document.createElement('div');
-        qrCodeDiv.className = 'qrcode';
-        const empNameDiv = document.createElement('div');
-        empNameDiv.className = 'employee-name';
-        empNameDiv.textContent = emp.name;
-
-        card.appendChild(qrCodeDiv);
-        card.appendChild(empNameDiv);
-        employeeGrid.appendChild(card);
-
-        // QR code link
-        const absUrl = new URL(location.href);
-        absUrl.pathname = 'attendance-submit.html';
-        absUrl.searchParams.set('employee', emp.id);
-        
-        QRCode.toCanvas(absUrl.toString(), {width: 140, margin: 2, color: {dark:"#2563eb", light:"#fff"}}, function (error, canvas) {
-          if (error) {
-            qrCodeDiv.textContent = 'QR code generation error';
-            console.error(error);
-            return;
-          }
-          qrCodeDiv.appendChild(canvas);
-        });
-      });
-    }
-
-    // Load attendance logs from localStorage
-    function loadAttendanceRecords() {
-      let records = [];
-      try {
-        const stored = localStorage.getItem('attendanceRecords');
-        if (stored) {
-          records = JSON.parse(stored);
-        }
-      } catch {
-        records = [];
-      }
-      return Array.isArray(records) ? records : [];
-    }
-
-    // Render attendance logs in table
-    function renderAttendanceLogs() {
-      const records = loadAttendanceRecords();
-      attendanceLogBody.innerHTML = '';
-      if (records.length === 0) {
-        const tr = document.createElement('tr');
-        const td = document.createElement('td');
-        td.colSpan = 4;
-        td.style.textAlign = 'center';
-        td.style.padding = '24px';
-        td.textContent = 'No attendance records submitted yet.';
-        tr.appendChild(td);
-        attendanceLogBody.appendChild(tr);
-        return;
-      }
-      records.forEach(record => {
-        const emp = employees.find(e => e.id === record.employeeId);
-        if (!emp) return;
-        const tr = document.createElement('tr');
-
-        // Name
-        const tdName = document.createElement('td');
-        tdName.textContent = emp.name;
-        tr.appendChild(tdName);
-
-        // Time IST
-        const tdTime = document.createElement('td');
-        tdTime.className = 'datetime-cell';
-        tdTime.textContent = formatISTDateTime(record.timestamp);
-        tr.appendChild(tdTime);
-
-        // Location lat/lon
-        const tdLocation = document.createElement('td');
-        tdLocation.className = 'location-cell';
-        if (record.location) {
-          tdLocation.textContent = `${record.location.latitude.toFixed(4)}, ${record.location.longitude.toFixed(4)}`;
-          tdLocation.title = `Latitude: ${record.location.latitude} Longitude: ${record.location.longitude}`;
-        } else {
-          tdLocation.textContent = 'Unavailable';
-        }
-        tr.appendChild(tdLocation);
-
-        // Description
-        const tdDesc = document.createElement('td');
-        tdDesc.className = 'description-cell';
-        tdDesc.textContent = record.description || '';
-        tr.appendChild(tdDesc);
-
-        attendanceLogBody.appendChild(tr);
-      });
-    }
-
-    // Initialize the admin page
-    function init() {
-      generateQRCodes();
-      renderAttendanceLogs();
-      // Poll every 5 seconds to refresh logs
-      setInterval(renderAttendanceLogs, 5000);
-    }
-
-    window.addEventListener('DOMContentLoaded', init);
-  </script>
-</body>
-</html>
-
+      <div id="logDesc" class="sr-only">Attendance
