@@ -124,24 +124,17 @@
     tbody tr:hover {
       background: #e0e7ff33;
     }
-    .selfie-thumb {
-      width: 56px;
-      height: 56px;
-      border-radius: 12px;
-      object-fit: cover;
-      box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
-    }
-    .description-cell {
-      max-width: 280px;
-      overflow-wrap: break-word;
-      white-space: pre-wrap;
-      color: #4b5563;
-    }
     .datetime-cell, .location-cell {
       white-space: nowrap;
       color: #475569;
       font-variant-numeric: tabular-nums;
       font-weight: 500;
+    }
+    .description-cell {
+      max-width: 320px;
+      overflow-wrap: break-word;
+      white-space: pre-wrap;
+      color: #4b5563;
     }
     /* Scrollbar styling */
     .employee-grid::-webkit-scrollbar,
@@ -186,7 +179,6 @@
       <table role="table" aria-describedby="logDesc">
         <thead>
           <tr>
-            <th scope="col">Selfie</th>
             <th scope="col">Employee</th>
             <th scope="col">Time (IST)</th>
             <th scope="col">Location (Latitude, Longitude)</th>
@@ -197,22 +189,22 @@
           <!-- Attendance entries go here -->
         </tbody>
       </table>
-      <div id="logDesc" class="sr-only">Attendance log table showing selfie, employee name, time in IST, location, and description</div>
+      <div id="logDesc" class="sr-only">Attendance log table showing employee name, time in IST, location, and description</div>
     </div>
   </div>
 
   <script>
     // 20 employees with names
     const employees = [
-      {id: 1, name: "Atharv Khanvilkar"},
-      {id: 2, name: "Rishikesh Kharat"},
-      {id: 3, name: "Rushav Bhosle"},
-      {id: 4, name: "Jayaprakash Swain"},
-      {id: 5, name: "Subhashree Sahoo"},
-      {id: 6, name: "Namrata Byas"},
-      {id: 7, name: "Jagruti Mahadik"},
-      {id: 8, name: "Neha Tiwari"},
-      {id: 9, name: "Priyank Pandit"},
+      {id: 1, name: "Aarav Sharma"},
+      {id: 2, name: "Sneha Patel"},
+      {id: 3, name: "Rohan Gupta"},
+      {id: 4, name: "Anita Deshmukh"},
+      {id: 5, name: "Vikram Singh"},
+      {id: 6, name: "Pooja Mehta"},
+      {id: 7, name: "Sanjay Rao"},
+      {id: 8, name: "Neha Kapoor"},
+      {id: 9, name: "Aditya Khanna"},
       {id: 10, name: "Divya Iyer"},
       {id: 11, name: "Karan Malhotra"},
       {id: 12, name: "Maya Nair"},
@@ -295,7 +287,7 @@
       if (records.length === 0) {
         const tr = document.createElement('tr');
         const td = document.createElement('td');
-        td.colSpan = 5;
+        td.colSpan = 4;
         td.style.textAlign = 'center';
         td.style.padding = '24px';
         td.textContent = 'No attendance records submitted yet.';
@@ -307,15 +299,6 @@
         const emp = employees.find(e => e.id === record.employeeId);
         if (!emp) return;
         const tr = document.createElement('tr');
-
-        // Selfie thumbnail
-        const tdSelfie = document.createElement('td');
-        const img = document.createElement('img');
-        img.className = 'selfie-thumb';
-        img.alt = `Selfie of ${emp.name}`;
-        img.src = record.selfieDataUrl || '';
-        tdSelfie.appendChild(img);
-        tr.appendChild(tdSelfie);
 
         // Name
         const tdName = document.createElement('td');
