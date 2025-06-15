@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Attendance Admin - Employee QR Codes and Logs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&amp;display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <style>
+    /* Reset and base */
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: #fefefe;
+      color: #1f2937;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 24px;
+      color: #111827;
+    }
+    h2 {
+      font-weight: 700;
+      font-size: 1.75rem;
+      margin-top: 48px;
+      margin-bottom: 24px;
+      color: #111827;
+      border-bottom: 3px solid #3b82f6;
+      padding-bottom: 8px;
+      width: 100%;
+      max-width: 1200px;
+    }
+    /* Container */
+    .container {
+      max-width: 1200px;
+      width: 100%;
+    }
+    /* Employee QR grid */
+    .employee-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 24px;
+      padding-bottom: 8px;
+      max-height: 520px;
+      overflow-y: auto;
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 8px rgb(0 0 0 / 0.05);
+    }
+    .employee-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgb(0 0 0 / 0.09);
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      user-select: none;
+    }
+    .employee-name {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #1e293b;
+      margin-bottom: 12px;
+      text-align: center;
+      height: 44px;
+      overflow-wrap: break-word;
+    }
+    .qrcode {
+      width: 140px;
+      height: 140px;
+      padding: 8px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 0 8px rgb(0 0 0 / 0.1);
+    }
+
+    /* Attendance logs */
+    .attendance-log {
+      margin-top: 16px;
+      overflow-x: auto;
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgb(0 0 0 / 0.07);
+      max-height: 550px;
+      overflow-y: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      color: #374151;
+      min-width: 720px;
+    }
+    th, td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+      vertical-align: middle;
+    }
+    th {
+      background: #e0e7ff;
+      font-weight: 700;
+      color: #1e40af;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    tbody tr:hover {
+      background: #e0e7ff33;
+    }
+    .selfie-thumb {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      object-fit: cover;
+      box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+    }
+    .description-cell {
+      max-width: 280px;
+      overflow-wrap: break-word;
+      white-space: pre-wrap;
+      color: #4b5563;
+    }
+    .datetime-cell, .location-cell {
+      white-space: nowrap;
+      color: #475569;
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+    }
+    /* Scrollbar styling */
+    .employee-grid::-webkit-scrollbar,
+    .attendance-log::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    .employee-grid::-webkit-scrollbar-thumb,
+    .attendance-log::-webkit-scrollbar-thumb {
+      background-color: rgba(59, 130, 246, 0.4);
+      border-radius: 4px;
+    }
+    .employee-grid::-webkit-scrollbar-track,
+    .attendance-log::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    /* Responsive */
+    @media (max-width: 720px) {
+      .employee-grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        max-height: 430px;
+      }
+      table {
+        font-size: 0.8rem;
+        min-width: 600px;
+      }
+      .description-cell {
+        max-width: 180px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Attendance Admin Panel</h1>
+  <div class="container">
+    <h2>Employee QR Codes</h2>
+    <div class="employee-grid" id="employeeGrid" aria-label="Employee QR codes for scanning"></div>
+
+    <h2>Attendance Logs</h2>
+    <div class="attendance-log" aria-live="polite" aria-relevant="additions" aria-label="Attendance log of submissions">
+      <table role="table" aria-describedby="logDesc">
+        <thead>
+          <tr>
+            <th scope="col">Selfie</th>
+            <th scope="col">Employee</th>
+            <th scope="col">Time (IST)</th>
+            <th scope="col">Location (Latitude, Longitude)</th>
+            <th scope="col">Description</th>
+          </tr>
+        </thead>
+        <tbody id="attendanceLogBody">
+          <!-- Attendance entries go here -->
+        </tbody>
+      </table>
+      <div id="logDesc" class="sr-only">Attendance log table showing selfie, employee name, time in IST, location, and description</div>
+    </div>
+  </div>
+
+  <script>
+    // 20 employees with names
+    const employees = [
+      {id: 1, name: "Aarav Sharma"},
+      {id: 2, name: "Sneha Patel"},
+      {id: 3, name: "Rohan Gupta"},
+      {id: 4, name: "Anita Deshmukh"},
+      {id: 5, name: "Vikram Singh"},
+      {id: 6, name: "Pooja Mehta"},
+      {id: 7, name: "Sanjay Rao"},
+      {id: 8, name: "Neha Kapoor"},
+      {id: 9, name: "Aditya Khanna"},
+      {id: 10, name: "Divya Iyer"},
+      {id: 11, name: "Karan Malhotra"},
+      {id: 12, name: "Maya Nair"},
+      {id: 13, name: "Raghav Joshi"},
+      {id: 14, name: "Sunita Verma"},
+      {id: 15, name: "Tarun Bhatia"},
+      {id: 16, name: "Priya Chawla"},
+      {id: 17, name: "Anil Kumar"},
+      {id: 18, name: "Neelam Joshi"},
+      {id: 19, name: "Rajesh Kumar"},
+      {id: 20, name: "Sonal Gupta"},
+    ];
+
+    const employeeGrid = document.getElementById('employeeGrid');
+    const attendanceLogBody = document.getElementById('attendanceLogBody');
+
+    // Format date/time IST for display
+    function formatISTDateTime(date) {
+      if (!(date instanceof Date)) date = new Date(date);
+      try {
+        return new Intl.DateTimeFormat('en-IN', {
+          year: 'numeric', month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit', second: '2-digit',
+          hour12: false, timeZone: 'Asia/Kolkata'
+        }).format(date);
+      } catch {
+        return date.toLocaleString();
+      }
+    }
+
+    // Generate QR codes for each employee
+    function generateQRCodes() {
+      employees.forEach(emp => {
+        const card = document.createElement('div');
+        card.className = 'employee-card';
+        const qrCodeDiv = document.createElement('div');
+        qrCodeDiv.className = 'qrcode';
+        const empNameDiv = document.createElement('div');
+        empNameDiv.className = 'employee-name';
+        empNameDiv.textContent = emp.name;
+
+        card.appendChild(qrCodeDiv);
+        card.appendChild(empNameDiv);
+        employeeGrid.appendChild(card);
+
+        // QR code link
+        const absUrl = new URL(location.href);
+        absUrl.pathname = 'attendance-submit.html';
+        absUrl.searchParams.set('employee', emp.id);
+        
+        QRCode.toCanvas(absUrl.toString(), {width: 140, margin: 2, color: {dark:"#2563eb", light:"#fff"}}, function (error, canvas) {
+          if (error) {
+            qrCodeDiv.textContent = 'QR code generation error';
+            console.error(error);
+            return;
+          }
+          qrCodeDiv.appendChild(canvas);
+        });
+      });
+    }
+
+    // Load attendance logs from localStorage
+    function loadAttendanceRecords() {
+      let records = [];
+      try {
+        const stored = localStorage.getItem('attendanceRecords');
+        if (stored) {
+          records = JSON.parse(stored);
+        }
+      } catch {
+        records = [];
+      }
+      return Array.isArray(records) ? records : [];
+    }
+
+    // Render attendance logs in table
+    function renderAttendanceLogs() {
+      const records = loadAttendanceRecords();
+      attendanceLogBody.innerHTML = '';
+      if (records.length === 0) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 5;
+        td.style.textAlign = 'center';
+        td.style.padding = '24px';
+        td.textContent = 'No attendance records submitted yet.';
+        tr.appendChild(td);
+        attendanceLogBody.appendChild(tr);
+        return;
+      }
+      records.forEach(record => {
+        const emp = employees.find(e => e.id === record.employeeId);
+        if (!emp) return;
+        const tr = document.createElement('tr');
+
+        // Selfie thumbnail
+        const tdSelfie = document.createElement('td');
+        const img = document.createElement('img');
+        img.className = 'selfie-thumb';
+        img.alt = `Selfie of ${emp.name}`;
+        img.src = record.selfieDataUrl || '';
+        tdSelfie.appendChild(img);
+        tr.appendChild(tdSelfie);
+
+        // Name
+        const tdName = document.createElement('td');
+        tdName.textContent = emp.name;
+        tr.appendChild(tdName);
+
+        // Time IST
+        const tdTime = document.createElement('td');
+        tdTime.className = 'datetime-cell';
+        tdTime.textContent = formatISTDateTime(record.timestamp);
+        tr.appendChild(tdTime);
+
+        // Location lat/lon
+        const tdLocation = document.createElement('td');
+        tdLocation.className = 'location-cell';
+        if (record.location) {
+          tdLocation.textContent = `${record.location.latitude.toFixed(4)}, ${record.location.longitude.toFixed(4)}`;
+          tdLocation.title = `Latitude: ${record.location.latitude} Longitude: ${record.location.longitude}`;
+        } else {
+          tdLocation.textContent = 'Unavailable';
+        }
+        tr.appendChild(tdLocation);
+
+        // Description
+        const tdDesc = document.createElement('td');
+        tdDesc.className = 'description-cell';
+        tdDesc.textContent = record.description || '';
+        tr.appendChild(tdDesc);
+
+        attendanceLogBody.appendChild(tr);
+      });
+    }
+
+    // Initialize the admin page
+    function init() {
+      generateQRCodes();
+      renderAttendanceLogs();
+      // Poll every 5 seconds to refresh logs
+      setInterval(renderAttendanceLogs, 5000);
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
+
